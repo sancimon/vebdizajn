@@ -102,7 +102,7 @@ export function SearchBar({
           <span className="text-muted-foreground">Active filters:</span>
           {searchQuery && (
             <span className="px-2 py-1 bg-primary/10 text-primary rounded-md">
-              Search: "{searchQuery}"
+              Search: &quot;{searchQuery}&quot;
             </span>
           )}
           {cuisineFilter !== "all" && (
