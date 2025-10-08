@@ -14,7 +14,7 @@ export async function getUserFavorites(userId: string): Promise<string[]> {
     }
 
     // Return array of recipe IDs
-    return (data || []).map(fav => fav.recipe_id);
+    return (data || []).map((fav: { recipe_id: string }) => fav.recipe_id);
   } catch (error) {
     console.error('Unexpected error fetching favorites:', error);
     return [];
