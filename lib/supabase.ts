@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
 // Supabase configuration
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -11,16 +11,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Create a single supabase client for interacting with your database
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    storageKey: 'sb-pkllawugnxqubgltqpot-auth-token',
-  },
-});
+// Create browser client for client-side usage (recommended for Next.js 14 App Router)
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
 // Database types (we'll expand this later with actual schema)
 export type Database = {
