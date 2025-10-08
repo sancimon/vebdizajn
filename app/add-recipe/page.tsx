@@ -125,6 +125,12 @@ export default function AddRecipePage() {
       }
 
       // Create recipe
+      if (!user) {
+        setError("You must be logged in to add a recipe");
+        setIsSubmitting(false);
+        return;
+      }
+
       const result = await addRecipe({
         title: title.trim(),
         imageUrl: imageUrl.trim(),

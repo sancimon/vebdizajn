@@ -40,6 +40,13 @@ export default function HomePage() {
     setIsLoadingRecipes(false);
   };
 
+  const loadFavorites = async () => {
+    if (user) {
+      const userFavorites = await getUserFavorites(user.id);
+      setFavorites(userFavorites);
+    }
+  };
+
   // Load favorites when user changes
   useEffect(() => {
     if (user) {
@@ -47,14 +54,8 @@ export default function HomePage() {
     } else {
       setFavorites([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-
-  const loadFavorites = async () => {
-    if (user) {
-      const userFavorites = await getUserFavorites(user.id);
-      setFavorites(userFavorites);
-    }
-  };
 
   // Filter recipes based on search and filters
   const filteredRecipes = useMemo(() => {
