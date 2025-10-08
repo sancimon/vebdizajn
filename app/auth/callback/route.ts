@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/';
+  const next = searchParams.get('next') ?? '/auth/confirmed';
 
   if (code) {
     const supabase = await createClient();
@@ -15,15 +15,19 @@ export async function GET(request: Request) {
       const isLocalEnv = process.env.NODE_ENV === 'development';
 
       if (isLocalEnv) {
+        // Redirect to confirmed page in local dev
         return NextResponse.redirect(`${origin}${next}`);
       } else if (forwardedHost) {
+        // Redirect to confirmed page in production
         return NextResponse.redirect(`https://${forwardedHost}${next}`);
       } else {
         return NextResponse.redirect(`${origin}${next}`);
       }
+    } else {
+      console.error('Auth callback error:', error);
     }
   }
 
-  // Return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+  // Return the user to home page with error
+  return NextResponse.redirect(`${origin}/?error=auth_failed`);
 }

@@ -87,14 +87,11 @@ export async function signup(
 
     // Check if email confirmation is required
     if (authData.user && !authData.session) {
+      // Email confirmation required - user created but not logged in yet
       return {
         success: true,
-        error: 'Please check your email to confirm your account before signing in.',
-        user: {
-          id: authData.user.id,
-          email: authData.user.email || email,
-          name: name.trim()
-        }
+        error: '✉️ Account created! Please check your email and click the confirmation link to activate your account.',
+        user: undefined // Don't return user until confirmed
       };
     }
 
