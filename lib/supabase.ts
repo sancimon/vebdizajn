@@ -1,4 +1,5 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
+import { Database } from './database.types';
 
 // Supabase configuration
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -11,105 +12,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Create a function that returns a browser client (proper pattern for Next.js 14)
-export function createClient() {
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
-}
-
-// Export a singleton instance for convenience
-export const supabase = createClient();
-
-// Database types (we'll expand this later with actual schema)
-export type Database = {
-  public: {
-    Tables: {
-      users: {
-        Row: {
-          id: string;
-          email: string;
-          name: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          email: string;
-          name: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          email?: string;
-          name?: string;
-          created_at?: string;
-        };
-      };
-      recipes: {
-        Row: {
-          id: string;
-          user_id: string;
-          title: string;
-          description: string;
-          image_url: string;
-          cuisine: string;
-          difficulty: 'Easy' | 'Medium' | 'Hard';
-          prep_time: number;
-          cook_time: number;
-          servings: number;
-          ingredients: string[];
-          instructions: string[];
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          title: string;
-          description: string;
-          image_url: string;
-          cuisine: string;
-          difficulty: 'Easy' | 'Medium' | 'Hard';
-          prep_time: number;
-          cook_time: number;
-          servings: number;
-          ingredients: string[];
-          instructions: string[];
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          title?: string;
-          description?: string;
-          image_url?: string;
-          cuisine?: string;
-          difficulty?: 'Easy' | 'Medium' | 'Hard';
-          prep_time?: number;
-          cook_time?: number;
-          servings?: number;
-          ingredients?: string[];
-          instructions?: string[];
-          created_at?: string;
-        };
-      };
-      favorites: {
-        Row: {
-          id: string;
-          user_id: string;
-          recipe_id: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          recipe_id: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          recipe_id?: string;
-          created_at?: string;
-        };
-      };
-    };
-  };
-};
+// Create Supabase client with proper session persistence for browser
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: 'supabase-auth-token',
+  }
+});
