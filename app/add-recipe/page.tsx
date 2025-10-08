@@ -47,7 +47,7 @@ export default function AddRecipePage() {
     }
   }, [user, isLoading, router]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setSuccess(false);
