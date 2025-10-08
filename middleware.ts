@@ -2,6 +2,22 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  const url = new URL(request.url);
+
+  // If there's an auth error in the URL, redirect to error page
+  if (url.searchParams.has('error') && url.pathname === '/') {
+    const error = url.searchParams.get('error');
+    const errorCode = url.searchParams.get('error_code');
+    const errorDescription = url.searchParams.get('error_description');
+
+    return NextResponse.redirect(
+      new URL(
+        `/auth/error?error=${error}&error_code=${errorCode}&error_description=${errorDescription}`,
+        request.url
+      )
+    );
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
