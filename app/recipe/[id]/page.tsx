@@ -1,12 +1,15 @@
+"use client";
+
 import { Container } from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, ChefHat, ArrowLeft } from "lucide-react";
-import { getRecipeById } from "@/lib/recipes";
+import { getRecipeById, Recipe } from "@/lib/recipes";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 interface RecipeDetailPageProps {
   params: {
@@ -20,8 +23,28 @@ const difficultyColors = {
   Hard: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
-export default async function RecipeDetailPage({ params }: RecipeDetailPageProps) {
-  const recipe = await getRecipeById(params.id);
+export default function RecipeDetailPage({ params }: RecipeDetailPageProps) {
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadRecipe() {
+      const data = await getRecipeById(params.id);
+      setRecipe(data || null);
+      setIsLoading(false);
+    }
+    loadRecipe();
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <div className="py-16">
+        <Container className="max-w-4xl">
+          <div className="text-center">Loading recipe...</div>
+        </Container>
+      </div>
+    );
+  }
 
   if (!recipe) {
     notFound();

@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
   const errorCode = searchParams.get('error_code');
@@ -57,5 +58,23 @@ export default function AuthErrorPage() {
         </Card>
       </Container>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="py-16">
+        <Container className="max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Loading...</CardTitle>
+            </CardHeader>
+          </Card>
+        </Container>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   );
 }
