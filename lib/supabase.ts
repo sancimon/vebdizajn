@@ -11,8 +11,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Create browser client for client-side usage (recommended for Next.js 14 App Router)
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+// Create a function that returns a browser client (proper pattern for Next.js 14)
+export function createClient() {
+  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+}
+
+// Export a singleton instance for convenience
+export const supabase = createClient();
 
 // Database types (we'll expand this later with actual schema)
 export type Database = {
