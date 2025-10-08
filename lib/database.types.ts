@@ -1,5 +1,13 @@
 // Database types for Supabase schema
-export type Database = {
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
   public: {
     Tables: {
       users: {
@@ -21,6 +29,7 @@ export type Database = {
           name?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       recipes: {
         Row: {
@@ -34,8 +43,8 @@ export type Database = {
           prep_time: number;
           cook_time: number;
           servings: number;
-          ingredients: string[];
-          instructions: string[];
+          ingredients: Json;
+          instructions: Json;
           created_at: string;
         };
         Insert: {
@@ -49,8 +58,8 @@ export type Database = {
           prep_time: number;
           cook_time: number;
           servings: number;
-          ingredients: string[];
-          instructions: string[];
+          ingredients?: Json;
+          instructions?: Json;
           created_at?: string;
         };
         Update: {
@@ -64,10 +73,18 @@ export type Database = {
           prep_time?: number;
           cook_time?: number;
           servings?: number;
-          ingredients?: string[];
-          instructions?: string[];
+          ingredients?: Json;
+          instructions?: Json;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "recipes_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       favorites: {
         Row: {
@@ -88,7 +105,33 @@ export type Database = {
           recipe_id?: string;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "favorites_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "favorites_recipe_id_fkey";
+            columns: ["recipe_id"];
+            referencedRelation: "recipes";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
-};
+}
