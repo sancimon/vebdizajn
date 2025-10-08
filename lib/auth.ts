@@ -1,43 +1,9 @@
+import { supabase } from './supabase';
+
 export interface User {
   id: string;
   name: string;
   email: string;
-}
-
-interface StoredUser extends User {
-  password: string;
-}
-
-const USERS_KEY = "recipe_app_users";
-const CURRENT_USER_KEY = "recipe_app_current_user";
-
-// Get all users from localStorage
-function getUsers(): StoredUser[] {
-  if (typeof window === "undefined") return [];
-  const users = localStorage.getItem(USERS_KEY);
-  return users ? JSON.parse(users) : [];
-}
-
-// Save users to localStorage
-function saveUsers(users: StoredUser[]): void {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-// Get current logged-in user
-export function getCurrentUser(): User | null {
-  if (typeof window === "undefined") return null;
-  const currentUser = localStorage.getItem(CURRENT_USER_KEY);
-  return currentUser ? JSON.parse(currentUser) : null;
-}
-
-// Set current logged-in user
-function setCurrentUser(user: User): void {
-  localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-}
-
-// Clear current user
-function clearCurrentUser(): void {
-  localStorage.removeItem(CURRENT_USER_KEY);
 }
 
 // Validate email format
@@ -46,94 +12,178 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
+// Get current logged-in user
+export async function getCurrentUser(): Promise<User | null> {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      return null;
+    }
+
+    // Fetch user profile from our users table
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return null;
+    }
+
+    return profile;
+  } catch (error) {
+    console.error('Error getting current user:', error);
+    return null;
+  }
+}
+
 // Sign up a new user
-export function signup(
+export async function signup(
   name: string,
   email: string,
   password: string
-): { success: boolean; error?: string; user?: User } {
-  // Validation
-  if (!name.trim()) {
-    return { success: false, error: "Name is required" };
+): Promise<{ success: boolean; error?: string; user?: User }> {
+  try {
+    // Validation
+    if (!name.trim()) {
+      return { success: false, error: 'Name is required' };
+    }
+
+    if (!email.trim()) {
+      return { success: false, error: 'Email is required' };
+    }
+
+    if (!validateEmail(email)) {
+      return { success: false, error: 'Invalid email format' };
+    }
+
+    if (!password || password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters' };
+    }
+
+    // Sign up with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        data: {
+          name: name.trim(),
+        },
+      },
+    });
+
+    if (authError) {
+      return { success: false, error: authError.message };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: 'Failed to create user' };
+    }
+
+    // The user profile is automatically created by the database trigger
+    // Wait a moment for the trigger to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Fetch the created profile
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return {
+        success: false,
+        error: 'Account created but profile fetch failed. Please try signing in.'
+      };
+    }
+
+    return {
+      success: true,
+      user: profile
+    };
+  } catch (error: any) {
+    console.error('Signup error:', error);
+    return {
+      success: false,
+      error: error?.message || 'An unexpected error occurred during signup'
+    };
   }
-
-  if (!email.trim()) {
-    return { success: false, error: "Email is required" };
-  }
-
-  if (!validateEmail(email)) {
-    return { success: false, error: "Invalid email format" };
-  }
-
-  if (!password || password.length < 6) {
-    return { success: false, error: "Password must be at least 6 characters" };
-  }
-
-  const users = getUsers();
-
-  // Check if user already exists
-  if (users.some((u) => u.email === email)) {
-    return { success: false, error: "User with this email already exists" };
-  }
-
-  // Create new user
-  const newUser: StoredUser = {
-    id: Date.now().toString(),
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    password,
-  };
-
-  users.push(newUser);
-  saveUsers(users);
-
-  // Return user without password
-  const { password: _, ...userWithoutPassword } = newUser;
-  setCurrentUser(userWithoutPassword);
-
-  return { success: true, user: userWithoutPassword };
 }
 
 // Sign in a user
-export function signin(
+export async function signin(
   email: string,
   password: string
-): { success: boolean; error?: string; user?: User } {
-  // Validation
-  if (!email.trim()) {
-    return { success: false, error: "Email is required" };
+): Promise<{ success: boolean; error?: string; user?: User }> {
+  try {
+    // Validation
+    if (!email.trim()) {
+      return { success: false, error: 'Email is required' };
+    }
+
+    if (!validateEmail(email)) {
+      return { success: false, error: 'Invalid email format' };
+    }
+
+    if (!password) {
+      return { success: false, error: 'Password is required' };
+    }
+
+    // Sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (authError) {
+      return { success: false, error: 'Invalid email or password' };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: 'Failed to sign in' };
+    }
+
+    // Fetch user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('id', authData.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return {
+        success: false,
+        error: 'Signed in but failed to fetch profile'
+      };
+    }
+
+    return {
+      success: true,
+      user: profile
+    };
+  } catch (error: any) {
+    console.error('Signin error:', error);
+    return {
+      success: false,
+      error: error?.message || 'An unexpected error occurred during sign in'
+    };
   }
-
-  if (!validateEmail(email)) {
-    return { success: false, error: "Invalid email format" };
-  }
-
-  if (!password) {
-    return { success: false, error: "Password is required" };
-  }
-
-  const users = getUsers();
-  const user = users.find(
-    (u) => u.email === email.trim().toLowerCase() && u.password === password
-  );
-
-  if (!user) {
-    return { success: false, error: "Invalid email or password" };
-  }
-
-  // Return user without password
-  const { password: _, ...userWithoutPassword } = user;
-  setCurrentUser(userWithoutPassword);
-
-  return { success: true, user: userWithoutPassword };
 }
 
 // Sign out the current user
-export function signout(): void {
-  clearCurrentUser();
+export async function signout(): Promise<void> {
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.error('Error signing out:', error);
+  }
 }
 
 // Check if user is authenticated
-export function isAuthenticated(): boolean {
-  return getCurrentUser() !== null;
+export async function isAuthenticated(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return user !== null;
 }

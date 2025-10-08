@@ -20,8 +20,8 @@ const difficultyColors = {
   Hard: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
-export default function RecipeDetailPage({ params }: RecipeDetailPageProps) {
-  const recipe = getRecipeById(params.id);
+export default async function RecipeDetailPage({ params }: RecipeDetailPageProps) {
+  const recipe = await getRecipeById(params.id);
 
   if (!recipe) {
     notFound();

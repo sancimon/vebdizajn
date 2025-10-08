@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 export interface Recipe {
   id: string;
   title: string;
@@ -10,8 +12,11 @@ export interface Recipe {
   prepTime: number; // in minutes
   cookTime: number; // in minutes
   servings: number;
+  userId?: string; // Optional: to track who created it
+  createdAt?: string; // Optional: timestamp
 }
 
+// Mock recipes for seeding/demo purposes
 export const mockRecipes: Recipe[] = [
   {
     id: "1",
@@ -217,58 +222,188 @@ export const mockRecipes: Recipe[] = [
   },
 ];
 
-const USER_RECIPES_KEY = "recipe_app_user_recipes";
+// Get all recipes from Supabase (combines user recipes and mock recipes)
+export async function getAllRecipes(): Promise<Recipe[]> {
+  try {
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-// Get user-created recipes from localStorage
-function getUserRecipes(): Recipe[] {
-  if (typeof window === "undefined") return [];
-  const recipes = localStorage.getItem(USER_RECIPES_KEY);
-  return recipes ? JSON.parse(recipes) : [];
+    if (error) {
+      console.error('Error fetching recipes:', error);
+      // Return mock recipes as fallback
+      return mockRecipes;
+    }
+
+    // Transform database records to Recipe interface
+    const dbRecipes: Recipe[] = (data || []).map(record => ({
+      id: record.id,
+      title: record.title,
+      imageUrl: record.image_url,
+      cuisine: record.cuisine,
+      difficulty: record.difficulty as "Easy" | "Medium" | "Hard",
+      description: record.description,
+      ingredients: record.ingredients as string[],
+      instructions: record.instructions as string[],
+      prepTime: record.prep_time,
+      cookTime: record.cook_time,
+      servings: record.servings,
+      userId: record.user_id,
+      createdAt: record.created_at,
+    }));
+
+    // Combine database recipes with mock recipes
+    return [...dbRecipes, ...mockRecipes];
+  } catch (error) {
+    console.error('Unexpected error fetching recipes:', error);
+    return mockRecipes;
+  }
 }
 
-// Save user recipes to localStorage
-function saveUserRecipes(recipes: Recipe[]): void {
-  localStorage.setItem(USER_RECIPES_KEY, JSON.stringify(recipes));
+// Get a recipe by ID
+export async function getRecipeById(id: string): Promise<Recipe | undefined> {
+  // Check if it's a mock recipe first (they have numeric IDs)
+  const mockRecipe = mockRecipes.find(recipe => recipe.id === id);
+  if (mockRecipe) return mockRecipe;
+
+  try {
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) {
+      console.error('Error fetching recipe:', error);
+      return undefined;
+    }
+
+    // Transform database record to Recipe interface
+    return {
+      id: data.id,
+      title: data.title,
+      imageUrl: data.image_url,
+      cuisine: data.cuisine,
+      difficulty: data.difficulty as "Easy" | "Medium" | "Hard",
+      description: data.description,
+      ingredients: data.ingredients as string[],
+      instructions: data.instructions as string[],
+      prepTime: data.prep_time,
+      cookTime: data.cook_time,
+      servings: data.servings,
+      userId: data.user_id,
+      createdAt: data.created_at,
+    };
+  } catch (error) {
+    console.error('Unexpected error fetching recipe:', error);
+    return undefined;
+  }
 }
 
 // Add a new recipe
-export function addRecipe(recipe: Omit<Recipe, "id">): Recipe {
-  const newRecipe: Recipe = {
-    ...recipe,
-    id: `user-${Date.now()}`,
-  };
+export async function addRecipe(
+  recipe: Omit<Recipe, "id" | "createdAt">,
+  userId: string
+): Promise<{ success: boolean; error?: string; recipe?: Recipe }> {
+  try {
+    const { data, error } = await supabase
+      .from('recipes')
+      .insert({
+        user_id: userId,
+        title: recipe.title,
+        image_url: recipe.imageUrl,
+        cuisine: recipe.cuisine,
+        difficulty: recipe.difficulty,
+        description: recipe.description,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        prep_time: recipe.prepTime,
+        cook_time: recipe.cookTime,
+        servings: recipe.servings,
+      })
+      .select()
+      .single();
 
-  const userRecipes = getUserRecipes();
-  userRecipes.unshift(newRecipe); // Add to beginning
-  saveUserRecipes(userRecipes);
+    if (error) {
+      console.error('Error adding recipe:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to add recipe'
+      };
+    }
 
-  return newRecipe;
+    if (!data) {
+      return {
+        success: false,
+        error: 'No data returned from insert'
+      };
+    }
+
+    // Transform database record to Recipe interface
+    const newRecipe: Recipe = {
+      id: data.id,
+      title: data.title,
+      imageUrl: data.image_url,
+      cuisine: data.cuisine,
+      difficulty: data.difficulty as "Easy" | "Medium" | "Hard",
+      description: data.description,
+      ingredients: data.ingredients as string[],
+      instructions: data.instructions as string[],
+      prepTime: data.prep_time,
+      cookTime: data.cook_time,
+      servings: data.servings,
+      userId: data.user_id,
+      createdAt: data.created_at,
+    };
+
+    return {
+      success: true,
+      recipe: newRecipe
+    };
+  } catch (error: any) {
+    console.error('Unexpected error adding recipe:', error);
+    return {
+      success: false,
+      error: error?.message || 'An unexpected error occurred'
+    };
+  }
 }
 
-// Delete a user recipe
-export function deleteRecipe(id: string): boolean {
-  if (!id.startsWith("user-")) return false;
+// Delete a recipe (user can only delete their own recipes)
+export async function deleteRecipe(
+  recipeId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Don't allow deleting mock recipes
+    if (['1', '2', '3', '4', '5', '6'].includes(recipeId)) {
+      return {
+        success: false,
+        error: 'Cannot delete mock recipes'
+      };
+    }
 
-  const userRecipes = getUserRecipes();
-  const filtered = userRecipes.filter((recipe) => recipe.id !== id);
-  saveUserRecipes(filtered);
+    const { error } = await supabase
+      .from('recipes')
+      .delete()
+      .eq('id', recipeId)
+      .eq('user_id', userId); // Ensure user can only delete their own recipes
 
-  return true;
-}
+    if (error) {
+      console.error('Error deleting recipe:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to delete recipe'
+      };
+    }
 
-// Helper function to get a recipe by ID (checks both mock and user recipes)
-export function getRecipeById(id: string): Recipe | undefined {
-  // Check user recipes first
-  const userRecipes = getUserRecipes();
-  const userRecipe = userRecipes.find((recipe) => recipe.id === id);
-  if (userRecipe) return userRecipe;
-
-  // Then check mock recipes
-  return mockRecipes.find((recipe) => recipe.id === id);
-}
-
-// Helper function to get all recipes (combines mock and user recipes)
-export function getAllRecipes(): Recipe[] {
-  const userRecipes = getUserRecipes();
-  return [...userRecipes, ...mockRecipes];
+    return { success: true };
+  } catch (error: any) {
+    console.error('Unexpected error deleting recipe:', error);
+    return {
+      success: false,
+      error: error?.message || 'An unexpected error occurred'
+    };
+  }
 }

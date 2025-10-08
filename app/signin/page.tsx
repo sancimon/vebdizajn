@@ -28,13 +28,13 @@ export default function SignInPage() {
     }
   }, [user, router]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
     // Perform sign in
-    const result = signin(email, password);
+    const result = await signin(email, password);
 
     if (result.success && result.user) {
       setUser(result.user);

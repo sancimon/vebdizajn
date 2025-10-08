@@ -125,7 +125,7 @@ export default function AddRecipePage() {
       }
 
       // Create recipe
-      const newRecipe = addRecipe({
+      const result = await addRecipe({
         title: title.trim(),
         imageUrl: imageUrl.trim(),
         cuisine: cuisine.trim(),
@@ -136,7 +136,13 @@ export default function AddRecipePage() {
         servings: parseInt(servings),
         ingredients: ingredientsList,
         instructions: instructionsList,
-      });
+      }, user.id);
+
+      if (!result.success) {
+        setError(result.error || "Failed to add recipe");
+        setIsSubmitting(false);
+        return;
+      }
 
       setSuccess(true);
 

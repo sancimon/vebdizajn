@@ -30,7 +30,7 @@ export default function SignUpPage() {
     }
   }, [user, router]);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
@@ -43,7 +43,7 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     // Perform sign up
-    const result = signup(name, email, password);
+    const result = await signup(name, email, password);
 
     if (result.success && result.user) {
       setUser(result.user);

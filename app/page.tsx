@@ -15,26 +15,46 @@ import { Eye, Heart, Sparkles } from "lucide-react";
 
 export default function HomePage() {
   const { user } = useAuth();
-  const allRecipes = getAllRecipes();
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [useModalView, setUseModalView] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [isLoadingRecipes, setIsLoadingRecipes] = useState(true);
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [cuisineFilter, setCuisineFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");
 
+  // Load recipes on mount
+  useEffect(() => {
+    loadRecipes();
+  }, []);
+
+  const loadRecipes = async () => {
+    setIsLoadingRecipes(true);
+    const recipes = await getAllRecipes();
+    setAllRecipes(recipes);
+    setIsLoadingRecipes(false);
+  };
+
   // Load favorites when user changes
   useEffect(() => {
     if (user) {
-      setFavorites(getUserFavorites(user.id));
+      loadFavorites();
     } else {
       setFavorites([]);
     }
   }, [user]);
+
+  const loadFavorites = async () => {
+    if (user) {
+      const userFavorites = await getUserFavorites(user.id);
+      setFavorites(userFavorites);
+    }
+  };
 
   // Filter recipes based on search and filters
   const filteredRecipes = useMemo(() => {
@@ -84,7 +104,7 @@ export default function HomePage() {
     setModalOpen(true);
   };
 
-  const handleFavoriteToggle = (recipeId: string, e: React.MouseEvent) => {
+  const handleFavoriteToggle = async (recipeId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -93,8 +113,8 @@ export default function HomePage() {
       return;
     }
 
-    toggleFavorite(user.id, recipeId);
-    setFavorites(getUserFavorites(user.id));
+    await toggleFavorite(user.id, recipeId);
+    await loadFavorites();
   };
 
   const handleClearFilters = () => {
