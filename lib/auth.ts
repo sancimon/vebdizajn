@@ -71,8 +71,11 @@ export async function signup(
         data: {
           name: name.trim(),
         },
+        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
       },
     });
+
+    console.log('Signup response:', { authData, authError });
 
     if (authError) {
       return { success: false, error: authError.message };
@@ -80,6 +83,19 @@ export async function signup(
 
     if (!authData.user) {
       return { success: false, error: 'Failed to create user' };
+    }
+
+    // Check if email confirmation is required
+    if (authData.user && !authData.session) {
+      return {
+        success: true,
+        error: 'Please check your email to confirm your account before signing in.',
+        user: {
+          id: authData.user.id,
+          email: authData.user.email || email,
+          name: name.trim()
+        }
+      };
     }
 
     // The user profile is automatically created by the database trigger
@@ -94,6 +110,7 @@ export async function signup(
       .single();
 
     if (profileError || !profile) {
+      console.error('Profile fetch error:', profileError);
       return {
         success: false,
         error: 'Account created but profile fetch failed. Please try signing in.'
@@ -138,7 +155,16 @@ export async function signin(
       password,
     });
 
+    console.log('Signin response:', { authData, authError });
+
     if (authError) {
+      console.error('Sign in error:', authError);
+
+      // Check if it's an email confirmation error
+      if (authError.message.includes('Email not confirmed')) {
+        return { success: false, error: 'Please confirm your email before signing in. Check your inbox.' };
+      }
+
       return { success: false, error: 'Invalid email or password' };
     }
 
