@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/components/providers/auth-provider";
-import { addRecipe, Recipe } from "@/lib/recipes";
+import { Recipe } from "@/lib/recipes";
+import { addRecipeAction } from "@/app/actions/recipes";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useEffect } from "react";
 import { AlertCircle, CheckCircle2, ChefHat } from "lucide-react";
@@ -124,14 +125,14 @@ export default function AddRecipePage() {
         return;
       }
 
-      // Create recipe
+      // Create recipe using Server Action
       if (!user) {
         setError("You must be logged in to add a recipe");
         setIsSubmitting(false);
         return;
       }
 
-      const result = await addRecipe({
+      const result = await addRecipeAction({
         title: title.trim(),
         imageUrl: imageUrl.trim(),
         cuisine: cuisine.trim(),
@@ -142,7 +143,7 @@ export default function AddRecipePage() {
         servings: parseInt(servings),
         ingredients: ingredientsList,
         instructions: instructionsList,
-      }, user.id);
+      });
 
       if (!result.success) {
         setError(result.error || "Failed to add recipe");
